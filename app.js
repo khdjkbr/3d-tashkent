@@ -10,10 +10,10 @@ function emptyCollection() { return { type: 'FeatureCollection', features: [] };
 function pointFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'Point', coordinates: [element.lon, element.lat] } }; }
 function coordinatePoint(point, kind, properties = {}) { return { type: 'Feature', properties: { kind, ...properties }, geometry: { type: 'Point', coordinates: [point.lon, point.lat] } }; }
 function treePartFeature(element, part) {
-  const isUpperCrown = part === 'crown-upper';
-  const size = part === 'trunk' ? 0.000012 : (isUpperCrown ? 0.000025 : 0.000035);
-  const base = part === 'trunk' ? 0 : (isUpperCrown ? 5.2 : 2.2);
-  const height = part === 'trunk' ? 2.2 : (isUpperCrown ? 8.4 : 6.5);
+  const crownLevel = { crown: { size: 0.000035, base: 2.2, height: 6.5 }, 'crown-mid': { size: 0.000030, base: 3.6, height: 7.6 }, 'crown-upper': { size: 0.000025, base: 5.2, height: 8.4 }, 'crown-top': { size: 0.000015, base: 7.0, height: 9.5 } }[part];
+  const size = part === 'trunk' ? 0.000012 : crownLevel.size;
+  const base = part === 'trunk' ? 0 : crownLevel.base;
+  const height = part === 'trunk' ? 2.2 : crownLevel.height;
   const points = Array.from({ length: 8 }, (_, index) => {
     const angle = Math.PI * 2 * index / 8;
     return [element.lon + Math.cos(angle) * size, element.lat + Math.sin(angle) * size];
@@ -58,7 +58,7 @@ function convertOverpass(data) {
     const tags = element.tags || {};
     if (element.type === 'node' && tags.highway === 'traffic_signals') result.signals.features.push(pointFeature(element, 'traffic_signals'));
     if (element.type === 'node' && tags.highway === 'crossing') result.crossings.features.push(pointFeature(element, 'crossing'));
-    if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); result.treeCrowns.features.push(treePartFeature(element, 'crown-upper')); }
+    if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); result.treeCrowns.features.push(treePartFeature(element, 'crown-mid')); result.treeCrowns.features.push(treePartFeature(element, 'crown-upper')); result.treeCrowns.features.push(treePartFeature(element, 'crown-top')); }
     if (element.type === 'way' && (['footway', 'path', 'pedestrian', 'cycleway'].includes(tags.highway) || tags.bridge === 'yes' || tags.tunnel === 'yes' || tags.covered === 'yes')) {
       if (seenWays.has(element.id)) return;
       seenWays.add(element.id);
@@ -144,6 +144,25 @@ map.on('load', () => {
   const roadLayers = map.getStyle().layers.filter((layer) => ['transportation', 'transportation_name'].includes(layer['source-layer'])).map((layer) => layer.id);
   const waterLayers = map.getStyle().layers.filter((layer) => ['water', 'waterway'].includes(layer['source-layer'])).map((layer) => layer.id);
   const greeneryLayers = map.getStyle().layers.filter((layer) => ['park', 'landcover', 'landuse'].includes(layer['source-layer'])).map((layer) => layer.id);
+  try {
+    const grassCanvas = document.createElement('canvas');
+    grassCanvas.width = 64;
+    grassCanvas.height = 64;
+    const grassContext = grassCanvas.getContext('2d');
+    grassContext.fillStyle = '#b7d79d';
+    grassContext.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 90; i += 1) {
+      const x = (i * 37) % 64;
+      const y = (i * 53) % 64;
+      grassContext.fillStyle = i % 3 === 0 ? '#7fae78' : '#cbe1ad';
+      grassContext.fillRect(x, y, 1 + (i % 2), 1);
+    }
+    map.addImage('grass-pattern', grassContext.getImageData(0, 0, 64, 64), { pixelRatio: 2 });
+    greeneryLayers.forEach((id) => {
+      const layer = map.getLayer(id);
+      if (layer?.type === 'fill') { try { map.setPaintProperty(id, 'fill-pattern', 'grass-pattern'); } catch (error) { console.warn('Не удалось применить текстуру зелени', id); } }
+    });
+  } catch (error) { console.warn('Текстура зелени временно недоступна', error); }
   const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
