@@ -65,6 +65,8 @@ async function loadSpecialLayers() {
 }
 
 const map = new maplibregl.Map({ container: 'map', center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, hash: true, style: 'https://tiles.openfreemap.org/styles/liberty', attributionControl: false });
+map.addSource('tashkent-terrain', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, encoding: 'terrarium' });
+map.setTerrain({ source: 'tashkent-terrain', exaggeration: 1.15 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
