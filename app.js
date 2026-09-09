@@ -75,12 +75,6 @@ map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bott
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
 map.on('load', () => {
-  map.once('idle', () => {
-    if (!map.getSource('tashkent-terrain')) {
-      map.addSource('tashkent-terrain', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, encoding: 'terrarium' });
-      map.setTerrain({ source: 'tashkent-terrain', exaggeration: 1.15 });
-    }
-  });
   const buildingLayers = map.getStyle().layers.filter((layer) => layer['source-layer'] === 'building').map((layer) => layer.id);
   const roadLayers = map.getStyle().layers.filter((layer) => ['transportation', 'transportation_name'].includes(layer['source-layer'])).map((layer) => layer.id);
   const waterLayers = map.getStyle().layers.filter((layer) => ['water', 'waterway'].includes(layer['source-layer'])).map((layer) => layer.id);
