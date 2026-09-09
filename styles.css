@@ -35,3 +35,12 @@ h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
 .maplibregl-ctrl-group { overflow: hidden; border: 1px solid var(--line) !important; background: rgba(10,23,25,.86) !important; }
 .maplibregl-ctrl button { filter: invert(1); }
 @media (max-width: 640px) { .topbar { top: 15px; left: 15px; right: 15px; } .control-panel { top: 98px; left: 15px; } .map-hint { right: 15px; bottom: 15px; max-width: calc(100vw - 30px); font-size: 11px; } }
+.panel-toggle { width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.06); color: var(--ink); cursor: pointer; font-size: 15px; line-height: 1; }
+.panel-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.control-panel.is-collapsed { width: 48px; padding: 9px; }
+.control-panel.is-collapsed .panel-heading { margin: 0; }
+.control-panel.is-collapsed .panel-heading > div, .control-panel.is-collapsed .status-dot { display: none; }
+.control-panel.is-collapsed .panel-toggle { transform: rotate(180deg); }
+.control-panel.is-collapsed .layer-row, .control-panel.is-collapsed .legend-note { display: none; }
+.layer-row span { gap: 7px; }
+@media (max-width: 640px) { .control-panel { width: min(282px, calc(100vw - 30px)); padding: 12px; } .layer-row { min-height: 34px; font-size: 13px; } }
