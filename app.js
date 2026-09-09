@@ -152,20 +152,6 @@ async function loadSpecialLayers() {
   } finally { specialRequestInFlight = false; }
 }
 
-function applySunTime(hour) {
-  if (document.querySelector('#sun-toggle')?.checked === false) {
-    try { if (typeof map.setLight === 'function') map.setLight({ anchor: 'map', position: [1, 1, 90], color: '#dbe8ee', intensity: 0.16 }); } catch (error) {}
-    return;
-  }
-  const normalized = Math.max(5, Math.min(22, hour));
-  const daylight = Math.max(0, Math.sin(((normalized - 6) / 16) * Math.PI));
-  const azimuth = 180 + ((normalized - 12) * 12);
-  const color = daylight > 0.55 ? '#fff4d6' : (daylight > 0.12 ? '#f3b27c' : '#9db6d8');
-  try {
-    if (typeof map.setLight === 'function') map.setLight({ anchor: 'map', position: [1.5, azimuth, 45], color, intensity: 0.25 + daylight * 0.75 });
-  } catch (error) { console.warn('Освещение времени суток недоступно', error); }
-}
-
 const map = new maplibregl.Map({ container: 'map', center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, hash: true, style: 'https://tiles.openfreemap.org/styles/liberty', attributionControl: false });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
@@ -218,7 +204,6 @@ map.on('load', () => {
       waterLayers.forEach((id) => { if (map.getLayer(id)) { try { map.setPaintProperty(id, 'fill-translate', shift); } catch (error) {} } });
     }, 180);
   } catch (error) { console.warn('Анимация воды временно недоступна', error); }
-  applySunTime(Number(document.querySelector('#time-of-day')?.value || 14));
   const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'bridgeApproaches', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
@@ -268,20 +253,6 @@ document.querySelectorAll('[data-layer]').forEach((input) => {
     ids.forEach((id) => map.setLayoutProperty(id, 'visibility', event.target.checked ? 'visible' : 'none'));
   });
 });
-const timeControl = document.querySelector('#time-of-day');
-const timeValue = document.querySelector('#time-value');
-const sunToggle = document.querySelector('#sun-toggle');
-if (sunToggle) sunToggle.addEventListener('change', () => {
-  if (timeControl) timeControl.disabled = !sunToggle.checked;
-  applySunTime(Number(timeControl?.value || 14));
-});
-if (timeControl && timeValue) {
-  timeControl.addEventListener('input', (event) => {
-    const hour = Number(event.target.value);
-    timeValue.textContent = String(hour).padStart(2, '0') + ':00';
-    applySunTime(hour);
-  });
-}
 document.querySelector('#reset-view').addEventListener('click', () => map.flyTo({ center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, essential: true }));
 document.querySelector('#toggle-panel').addEventListener('click', (event) => {
   const panel = document.querySelector('.control-panel');
