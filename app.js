@@ -52,7 +52,7 @@ function bridgeApproachFeatures(point, toward, element) {
     const from = { lon: point.lon + ux * approachLength * previous, lat: point.lat + uy * approachLength * previous };
     const to = { lon: point.lon + ux * approachLength * level, lat: point.lat + uy * approachLength * level };
     previous = level;
-    return { type: 'Feature', properties: { kind: 'bridge-approach', base: 0, height: deckHeight * level }, geometry: { type: 'Polygon', coordinates: [[[from.lon + px, from.lat + py], [to.lon + px, to.lat + py], [to.lon - px, to.lat - py], [from.lon - px, from.lat - py], [from.lon + px, from.lat + py]]] } };
+    return { type: 'Feature', properties: { kind: 'bridge-approach', base: 0, height: deckHeight * level }, geometry: { type: 'LineString', coordinates: [[from.lon, from.lat], [to.lon, to.lat]] } };
   });
 }
 function bridgeSlabFeature(a, b, element) {
@@ -218,7 +218,7 @@ map.on('load', () => {
   const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'bridgeApproaches', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
-  map.addLayer({ id: 'osm-bridge-approaches', type: 'fill-extrusion', source: 'osm-bridgeApproaches', paint: { 'fill-extrusion-color': '#84776b', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.74 } });
+  map.addLayer({ id: 'osm-bridge-approaches', type: 'line', source: 'osm-bridgeApproaches', paint: { 'line-color': '#84776b', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 17, 8], 'line-opacity': 0.8, 'line-blur': 0.4 } });
   map.addLayer({ id: 'osm-bridge-slabs', type: 'fill-extrusion', source: 'osm-bridgeSlabs', paint: { 'fill-extrusion-color': '#75695e', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.68 } });
   map.addLayer({ id: 'osm-bridge-shadow', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#5b321b', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 7, 17, 18], 'line-opacity': 0.35, 'line-blur': 2 } });
   map.addLayer({ id: 'osm-bridge-deck', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#b9783f', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 4, 17, 12], 'line-opacity': 0.95 } });
