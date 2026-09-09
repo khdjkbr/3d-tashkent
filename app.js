@@ -80,6 +80,11 @@ map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bott
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
 map.on('load', () => {
+  try {
+    map.addSource('terrain-dem', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 15, encoding: 'terrarium' });
+    map.setTerrain({ source: 'terrain-dem', exaggeration: 1.25 });
+    map.addLayer({ id: 'terrain-hillshade', type: 'hillshade', source: 'terrain-dem', paint: { 'hillshade-shadow-color': '#38505a', 'hillshade-highlight-color': '#fff4d6', 'hillshade-accent-color': '#c69b67', 'hillshade-exaggeration': 0.28 } });
+  } catch (error) { console.warn('Рельеф временно недоступен', error); }
   const buildingLayers = map.getStyle().layers.filter((layer) => layer['source-layer'] === 'building').map((layer) => layer.id);
   const roadLayers = map.getStyle().layers.filter((layer) => ['transportation', 'transportation_name'].includes(layer['source-layer'])).map((layer) => layer.id);
   const waterLayers = map.getStyle().layers.filter((layer) => ['water', 'waterway'].includes(layer['source-layer'])).map((layer) => layer.id);
@@ -97,7 +102,7 @@ map.on('load', () => {
   map.addLayer({ id: 'osm-signals', type: 'circle', source: 'osm-signals', paint: { 'circle-color': '#f07062', 'circle-radius': 5, 'circle-stroke-color': '#fff3e4', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-tree-trunks', type: 'fill-extrusion', source: 'osm-treeTrunks', paint: { 'fill-extrusion-color': '#765034', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.95 } });
   map.addLayer({ id: 'osm-tree-crowns', type: 'fill-extrusion', source: 'osm-treeCrowns', paint: { 'fill-extrusion-color': '#398a58', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.84 } });
-  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], footways: ['osm-footways'], signals: ['osm-signals'] };
+  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], terrain: ['terrain-hillshade'], footways: ['osm-footways'], signals: ['osm-signals'] };
   map.on('click', buildingLayers, (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
