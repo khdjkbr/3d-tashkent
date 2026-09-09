@@ -7,15 +7,26 @@ function emptyCollection() { return { type: 'FeatureCollection', features: [] };
 function pointFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'Point', coordinates: [element.lon, element.lat] } }; }
 function coordinatePoint(point, kind, properties = {}) { return { type: 'Feature', properties: { kind, ...properties }, geometry: { type: 'Point', coordinates: [point.lon, point.lat] } }; }
 function treePartFeature(element, part) {
-  const size = part === 'trunk' ? 0.000012 : 0.000035;
-  const base = part === 'trunk' ? 0 : 2.2;
-  const height = part === 'trunk' ? 2.2 : 6.5;
+  const isUpperCrown = part === 'crown-upper';
+  const size = part === 'trunk' ? 0.000012 : (isUpperCrown ? 0.000025 : 0.000035);
+  const base = part === 'trunk' ? 0 : (isUpperCrown ? 5.2 : 2.2);
+  const height = part === 'trunk' ? 2.2 : (isUpperCrown ? 8.4 : 6.5);
   const points = Array.from({ length: 8 }, (_, index) => {
     const angle = Math.PI * 2 * index / 8;
     return [element.lon + Math.cos(angle) * size, element.lat + Math.sin(angle) * size];
   });
   points.push(points[0]);
   return { type: 'Feature', properties: { kind: part, base, height }, geometry: { type: 'Polygon', coordinates: [points] } };
+}
+function bridgeSlabFeature(a, b, element) {
+  const dx = b.lon - a.lon;
+  const dy = b.lat - a.lat;
+  const length = Math.hypot(dx, dy) || 1;
+  const halfWidth = element.tags?.highway === 'footway' ? 0.000035 : 0.00009;
+  const px = (-dy / length) * halfWidth;
+  const py = (dx / length) * halfWidth;
+  const base = element.tags?.highway === 'footway' ? 4.5 : 6;
+  return { type: 'Feature', properties: { kind: 'bridge-slab', base, height: base + 0.45 }, geometry: { type: 'Polygon', coordinates: [[[a.lon + px, a.lat + py], [b.lon + px, b.lat + py], [b.lon - px, b.lat - py], [a.lon - px, a.lat - py], [a.lon + px, a.lat + py]]] } };
 }
 function wayFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'LineString', coordinates: (element.geometry || []).map((point) => [point.lon, point.lat]) } }; }
 function bridgeDeckFeature(a, b, element) {
@@ -24,12 +35,12 @@ function bridgeDeckFeature(a, b, element) {
 }
 
 function convertOverpass(data) {
-  const result = { signals: emptyCollection(), crossings: emptyCollection(), trees: emptyCollection(), treeTrunks: emptyCollection(), treeCrowns: emptyCollection(), footways: emptyCollection(), underground: emptyCollection(), undergroundEntrances: emptyCollection(), bridgeDecks: emptyCollection() };
+  const result = { signals: emptyCollection(), crossings: emptyCollection(), trees: emptyCollection(), treeTrunks: emptyCollection(), treeCrowns: emptyCollection(), footways: emptyCollection(), underground: emptyCollection(), undergroundEntrances: emptyCollection(), bridgeDecks: emptyCollection(), bridgeSlabs: emptyCollection() };
   data.elements.forEach((element) => {
     const tags = element.tags || {};
     if (element.type === 'node' && tags.highway === 'traffic_signals') result.signals.features.push(pointFeature(element, 'traffic_signals'));
     if (element.type === 'node' && tags.highway === 'crossing') result.crossings.features.push(pointFeature(element, 'crossing'));
-    if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); }
+    if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); result.treeCrowns.features.push(treePartFeature(element, 'crown-upper')); }
     if (element.type === 'way' && (['footway', 'path', 'pedestrian', 'cycleway'].includes(tags.highway) || tags.bridge === 'yes')) {
       const points = element.geometry || [];
       const isUnderground = tags.tunnel === 'yes' || tags.covered === 'yes' || tags.layer === '-1';
@@ -37,7 +48,7 @@ function convertOverpass(data) {
       const target = isUnderground ? result.underground : result.footways;
       if (points.length > 1) {
         if (isBridge) {
-          for (let index = 0; index < points.length - 1; index += 1) result.bridgeDecks.features.push(bridgeDeckFeature(points[index], points[index + 1], element));
+          for (let index = 0; index < points.length - 1; index += 1) result.bridgeDecks.features.push(bridgeDeckFeature(points[index], points[index + 1], element)); result.bridgeSlabs.features.push(bridgeSlabFeature(points[index], points[index + 1], element));
         }
         target.features.push(wayFeature(element, isUnderground ? 'underground' : 'footway'));
         if (isUnderground) {
@@ -89,9 +100,10 @@ map.on('load', () => {
   const roadLayers = map.getStyle().layers.filter((layer) => ['transportation', 'transportation_name'].includes(layer['source-layer'])).map((layer) => layer.id);
   const waterLayers = map.getStyle().layers.filter((layer) => ['water', 'waterway'].includes(layer['source-layer'])).map((layer) => layer.id);
   const greeneryLayers = map.getStyle().layers.filter((layer) => ['park', 'landcover', 'landuse'].includes(layer['source-layer'])).map((layer) => layer.id);
-  const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'bridgeDecks', 'treeTrunks', 'treeCrowns'];
+  const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'bridgeDecks', 'bridgeSlabs', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
+  map.addLayer({ id: 'osm-bridge-slabs', type: 'fill-extrusion', source: 'osm-bridgeSlabs', paint: { 'fill-extrusion-color': '#9d6334', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.96 } });
   map.addLayer({ id: 'osm-bridge-shadow', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#5b321b', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 7, 17, 18], 'line-opacity': 0.35, 'line-blur': 2 } });
   map.addLayer({ id: 'osm-bridge-deck', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#b9783f', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 4, 17, 12], 'line-opacity': 0.95 } });
   map.addLayer({ id: 'osm-bridge-rails', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#ead0a0', 'line-width': 1.5, 'line-offset': 5, 'line-opacity': 0.9 } });
@@ -102,7 +114,7 @@ map.on('load', () => {
   map.addLayer({ id: 'osm-signals', type: 'circle', source: 'osm-signals', paint: { 'circle-color': '#f07062', 'circle-radius': 5, 'circle-stroke-color': '#fff3e4', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-tree-trunks', type: 'fill-extrusion', source: 'osm-treeTrunks', paint: { 'fill-extrusion-color': '#765034', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.95 } });
   map.addLayer({ id: 'osm-tree-crowns', type: 'fill-extrusion', source: 'osm-treeCrowns', paint: { 'fill-extrusion-color': '#398a58', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.84 } });
-  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], terrain: ['terrain-hillshade'], footways: ['osm-footways'], signals: ['osm-signals'] };
+  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-slabs', 'osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], terrain: ['terrain-hillshade'], footways: ['osm-footways'], signals: ['osm-signals'] };
   map.on('click', buildingLayers, (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
