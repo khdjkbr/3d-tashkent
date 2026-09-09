@@ -153,6 +153,10 @@ async function loadSpecialLayers() {
 }
 
 function applySunTime(hour) {
+  if (document.querySelector('#sun-toggle')?.checked === false) {
+    try { if (typeof map.setLight === 'function') map.setLight({ anchor: 'map', position: [1, 1, 90], color: '#dbe8ee', intensity: 0.16 }); } catch (error) {}
+    return;
+  }
   const normalized = Math.max(5, Math.min(22, hour));
   const daylight = Math.max(0, Math.sin(((normalized - 6) / 16) * Math.PI));
   const azimuth = 180 + ((normalized - 12) * 12);
@@ -266,6 +270,11 @@ document.querySelectorAll('[data-layer]').forEach((input) => {
 });
 const timeControl = document.querySelector('#time-of-day');
 const timeValue = document.querySelector('#time-value');
+const sunToggle = document.querySelector('#sun-toggle');
+if (sunToggle) sunToggle.addEventListener('change', () => {
+  if (timeControl) timeControl.disabled = !sunToggle.checked;
+  applySunTime(Number(timeControl?.value || 14));
+});
 if (timeControl && timeValue) {
   timeControl.addEventListener('input', (event) => {
     const hour = Number(event.target.value);
