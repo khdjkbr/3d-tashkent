@@ -13,6 +13,8 @@ html, body, .app-shell, #map { width: 100%; height: 100%; margin: 0; }
 body { overflow: hidden; background: #0a1719; color: var(--ink); }
 #map { position: absolute; inset: 0; }
 .app-shell { position: relative; isolation: isolate; }
+.app-shell::before { content: ''; position: fixed; inset: 0 0 auto; height: 220px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(5, 16, 18, .72) 0%, rgba(5, 16, 18, .42) 42%, rgba(5, 16, 18, 0) 100%); }
+.topbar { text-shadow: 0 2px 14px rgba(0, 0, 0, .72); }
 .topbar, .control-panel, .map-hint { position: absolute; z-index: 2; }
 .topbar { top: 22px; left: 24px; right: 24px; display: flex; align-items: flex-start; justify-content: space-between; pointer-events: none; }
 .topbar > * { pointer-events: auto; }
