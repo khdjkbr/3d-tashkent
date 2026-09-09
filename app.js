@@ -75,8 +75,6 @@ map.on('load', () => {
   const greeneryLayers = map.getStyle().layers.filter((layer) => ['park', 'landcover', 'landuse'].includes(layer['source-layer'])).map((layer) => layer.id);
   const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'bridgeDecks'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
-  map.addLayer({ id: 'osm-bridge-decks', type: 'fill-extrusion', source: 'osm-bridgeDecks', minzoom: 13, paint: { 'fill-extrusion-color': '#d29a62', 'fill-extrusion-height': ['coalesce', ['get', 'height'], 5], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.92 } });
-  map.addLayer({ id: 'osm-bridge-edges', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#593b2a', 'line-width': 2, 'line-opacity': 0.9 } });
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
   map.addLayer({ id: 'osm-underground-shadow', type: 'line', source: 'osm-underground', paint: { 'line-color': '#432d58', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 9, 18, 18], 'line-opacity': 0.38, 'line-blur': 2 } });
   map.addLayer({ id: 'osm-underground', type: 'line', source: 'osm-underground', paint: { 'line-color': '#c899f2', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 3, 18, 7], 'line-dasharray': [1.2, 1], 'line-opacity': 0.98 } });
@@ -84,7 +82,7 @@ map.on('load', () => {
   map.addLayer({ id: 'osm-crossings', type: 'circle', source: 'osm-crossings', paint: { 'circle-color': '#ffe37a', 'circle-radius': 5, 'circle-stroke-color': '#162324', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-signals', type: 'circle', source: 'osm-signals', paint: { 'circle-color': '#f07062', 'circle-radius': 5, 'circle-stroke-color': '#fff3e4', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-trees', type: 'circle', source: 'osm-trees', paint: { 'circle-color': '#74c69d', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2, 18, 5], 'circle-opacity': 0.85 } });
-  map.__layerGroups = { buildings: buildingLayers, roads: [...roadLayers, 'osm-bridge-decks', 'osm-bridge-edges'], water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-trees'], footways: ['osm-footways'], signals: ['osm-signals'] };
+  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-trees'], footways: ['osm-footways'], signals: ['osm-signals'] };
   map.on('click', buildingLayers, (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
