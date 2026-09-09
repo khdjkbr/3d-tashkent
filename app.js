@@ -50,7 +50,7 @@ async function loadSpecialLayers() {
   specialRequestInFlight = true;
   const bounds = map.getBounds();
   const bbox = bounds.getSouth() + ',' + bounds.getWest() + ',' + bounds.getNorth() + ',' + bounds.getEast();
-  const query = '[out:json][timeout:20];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');node[natural=tree](' + bbox + ');way[highway~"^(footway|path|pedestrian|cycleway)$"](' + bbox + ');way[bridge=yes](' + bbox + '););out body geom;';
+  const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');node[natural=tree](' + bbox + ');way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + '););out body geom;';
   try {
     const response = await fetch(overpassUrl + '?data=' + encodeURIComponent(query));
     if (!response.ok) throw new Error('Overpass ' + response.status);
