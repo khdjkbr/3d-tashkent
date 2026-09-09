@@ -10,7 +10,12 @@ function treePartFeature(element, part) {
   const size = part === 'trunk' ? 0.000012 : 0.000035;
   const base = part === 'trunk' ? 0 : 2.2;
   const height = part === 'trunk' ? 2.2 : 6.5;
-  return { type: 'Feature', properties: { kind: part, base, height }, geometry: { type: 'Polygon', coordinates: [[[element.lon - size, element.lat - size], [element.lon + size, element.lat - size], [element.lon + size, element.lat + size], [element.lon - size, element.lat + size], [element.lon - size, element.lat - size]]] } };
+  const points = Array.from({ length: 8 }, (_, index) => {
+    const angle = Math.PI * 2 * index / 8;
+    return [element.lon + Math.cos(angle) * size, element.lat + Math.sin(angle) * size];
+  });
+  points.push(points[0]);
+  return { type: 'Feature', properties: { kind: part, base, height }, geometry: { type: 'Polygon', coordinates: [points] } };
 }
 function wayFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'LineString', coordinates: (element.geometry || []).map((point) => [point.lon, point.lat]) } }; }
 function bridgeDeckFeature(a, b, element) {
