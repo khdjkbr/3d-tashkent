@@ -26,7 +26,7 @@ function convertOverpass(data) {
     }
   });
   return result;
-}
+}// Подключаем бесплатную модель рельеф
 
 async function loadSpecialLayers() {
   if (specialRequestInFlight || specialDataLoaded || map.getZoom() < 13) return;
@@ -54,7 +54,7 @@ const map = new maplibregl.Map({
   pitch: 58,
   bearing: -18,
   hash: true,
-  style: 'https://tiles.openfreemap.org/styles/liberty',
+  style: 'https://tiles.openfreemap.org/styles/liberty',// Подключаем бесплатную модель рельефа
   attributionControl: false
 });
 
@@ -74,14 +74,10 @@ map.on('load', () => {
   map.addLayer({ id: 'osm-signals', type: 'circle', source: 'osm-signals', paint: { 'circle-color': '#f07062', 'circle-radius': 5, 'circle-stroke-color': '#fff3e4', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-trees', type: 'circle', source: 'osm-trees', paint: { 'circle-color': '#74c69d', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2, 18, 5], 'circle-opacity': 0.85 } });
   map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground'], trees: ['osm-trees'], footways: ['osm-footways'], signals: ['osm-signals'] };
-
   map.on('click', buildingLayers, (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
-    new maplibregl.Popup({ closeButton: true, offset: 12 })
-      .setLngLat(event.lngLat)
-      .setHTML(`<strong>${feature.properties.name || 'Здание'}</strong><br>Оценочная высота: ${feature.properties.render_height || 'нет данных'} м<br><small>OpenStreetMap / OpenMapTiles</small>`)
-      .addTo(map);
+    new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML(`<strong>${feature.properties.name || 'Здание'}</strong><br>Оценочная высота: ${feature.properties.render_height || 'нет данных'} м<br><small>OpenStreetMap / OpenMapTiles</small>`).addTo(map);
   });
   map.on('mouseenter', buildingLayers, () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', buildingLayers, () => { map.getCanvas().style.cursor = ''; });
@@ -100,13 +96,4 @@ document.querySelectorAll('[data-layer]').forEach((input) => {
 
 document.querySelector('#reset-view').addEventListener('click', () => {
   map.flyTo({ center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, essential: true });
-});
-
-
-// Подключаем бесплатную модель рельефа для ощущения перепадов высот.
-map.on('load', () => {
-  if (!map.getSource('terrain')) {
-    map.addSource('terrain', { type: 'raster-dem', tiles: ['https://demotiles.maplibre.org/terrain-tiles/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 12 });
-    map.setTerrain({ source: 'terrain', exaggeration: 1.5 });
-  }
 });
