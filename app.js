@@ -118,3 +118,9 @@ document.querySelectorAll('[data-layer]').forEach((input) => {
   });
 });
 document.querySelector('#reset-view').addEventListener('click', () => map.flyTo({ center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, essential: true }));
+document.querySelector('#toggle-panel').addEventListener('click', (event) => {
+  const panel = document.querySelector('.control-panel');
+  const collapsed = panel.classList.toggle('is-collapsed');
+  event.currentTarget.textContent = collapsed ? '+' : '−';
+  event.currentTarget.setAttribute('aria-label', collapsed ? 'Раскрыть панель' : 'Свернуть панель');
+});
