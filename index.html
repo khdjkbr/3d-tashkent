@@ -6,7 +6,7 @@
     <meta name="description" content="Лёгкая 3D-карта Ташкента" />
     <title>3D Ташкент</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" />
-    <link rel="stylesheet" href="styles.css?v=30" />
+    <link rel="stylesheet" href="styles.css?v=31" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,7 +31,8 @@
           <span class="status-dot" title="Демо-режим"></span>
           <button id="toggle-panel" class="panel-toggle" type="button" aria-label="Свернуть панель" title="Свернуть или раскрыть панель">−</button>
         </div>
-        <label class="layer-row"><span><i class="swatch buildings"></i>🏢 Здания</span><input data-layer="buildings" type="checkbox" checked /></label>
+        <div class="time-control"><label for="time-of-day"><span>☀️ Время суток</span><output id="time-value" for="time-of-day">14:00</output></label><input id="time-of-day" type="range" min="5" max="22" step="1" value="14" /></div>
+      <label class="layer-row"><span><i class="swatch buildings"></i>🏢 Здания</span><input data-layer="buildings" type="checkbox" checked /></label>
         <label class="layer-row"><span><i class="swatch roads"></i>🛣️ Дороги</span><input data-layer="roads" type="checkbox" checked /></label>
         <label class="layer-row"><span><i class="swatch water"></i>💧 Вода</span><input data-layer="water" type="checkbox" checked /></label>
       <label class="layer-row"><span><i class="swatch greenery"></i>⛰️ Рельеф</span><input data-layer="terrain" type="checkbox" checked /></label>
@@ -47,6 +48,6 @@
       <div class="map-hint">Перетаскивайте карту · колёсико — масштаб · Ctrl + перетаскивание — наклон</div>
     </main>
     <script src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
-    <script src="app.js?v=34"></script>
+    <script src="app.js?v=35"></script>
   </body>
 </html>
