@@ -54,7 +54,7 @@ const map = new maplibregl.Map({
   pitch: 58,
   bearing: -18,
   hash: true,
-  style: 'https://tiles.openfreemap.org/styles/3d',
+  style: 'https://tiles.openfreemap.org/styles/liberty',
   attributionControl: false
 });
 
