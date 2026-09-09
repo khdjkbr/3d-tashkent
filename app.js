@@ -2,6 +2,7 @@ const tashkent = [69.2401, 41.2995];
 const overpassUrls = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 let specialRequestInFlight = false;
 let specialDataLoaded = false;
+let treeDataLoaded = false;
 
 function emptyCollection() { return { type: 'FeatureCollection', features: [] }; }
 function pointFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'Point', coordinates: [element.lon, element.lat] } }; }
@@ -85,11 +86,13 @@ function convertOverpass(data) {
 }
 
 async function loadSpecialLayers() {
-  if (specialRequestInFlight || specialDataLoaded || map.getZoom() < 13) return;
+  if (specialRequestInFlight || map.getZoom() < 13 || (specialDataLoaded && (treeDataLoaded || map.getZoom() < 15.5))) return;
   specialRequestInFlight = true;
   const bounds = map.getBounds();
   const bbox = bounds.getSouth() + ',' + bounds.getWest() + ',' + bounds.getNorth() + ',' + bounds.getEast();
-  const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');node[natural=tree](' + bbox + ');way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + ');way[bridge=yes](' + bbox + ');way[tunnel=yes](' + bbox + ');way[covered=yes](' + bbox + '););out body geom;';
+  const includeTrees = map.getZoom() >= 15.5;
+  const treeQuery = includeTrees ? 'node[natural=tree](' + bbox + ');' : '';
+  const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');' + treeQuery + 'way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + ');way[bridge=yes](' + bbox + ');way[tunnel=yes](' + bbox + ');way[covered=yes](' + bbox + '););out body geom;';
   try {
     let response;
     for (const endpoint of overpassUrls) {
@@ -102,6 +105,7 @@ async function loadSpecialLayers() {
     const layers = convertOverpass(await response.json());
     Object.entries(layers).forEach(([name, geojson]) => map.getSource('osm-' + name).setData(geojson));
     specialDataLoaded = true;
+    if (includeTrees) treeDataLoaded = true;
     document.querySelector('.legend-note').textContent = 'Основные слои — OSM. Специальные объекты загружены для текущей области карты через Overpass API.';
   } catch (error) {
     console.warn('Не удалось загрузить специальные OSM-слои', error);
