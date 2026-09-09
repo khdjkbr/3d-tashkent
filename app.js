@@ -3,6 +3,8 @@ const overpassUrls = ['https://overpass-api.de/api/interpreter', 'https://overpa
 let specialRequestInFlight = false;
 let specialDataLoaded = false;
 let treeDataLoaded = false;
+const specialCacheKey = 'tashkent-special-cache-v2';
+const specialCacheTtl = 10 * 60 * 1000;
 
 function emptyCollection() { return { type: 'FeatureCollection', features: [] }; }
 function pointFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'Point', coordinates: [element.lon, element.lat] } }; }
@@ -94,19 +96,31 @@ async function loadSpecialLayers() {
   const bounds = map.getBounds();
   const bbox = bounds.getSouth() + ',' + bounds.getWest() + ',' + bounds.getNorth() + ',' + bounds.getEast();
   const includeTrees = map.getZoom() >= 14.0;
+  try {
+    const cached = JSON.parse(localStorage.getItem(specialCacheKey) || 'null');
+    if (cached && cached.includeTrees === includeTrees && Date.now() - cached.savedAt < specialCacheTtl) {
+      Object.entries(cached.layers).forEach(([name, geojson]) => map.getSource('osm-' + name).setData(geojson));
+      specialDataLoaded = true;
+      treeDataLoaded = includeTrees;
+      specialRequestInFlight = false;
+      document.querySelector('.legend-note').textContent = 'Специальные объекты загружены из кэша браузера.';
+      return;
+    }
+  } catch (error) { console.warn('Кэш объектов недоступен', error); }
   const treeQuery = includeTrees ? 'node[natural=tree](' + bbox + ');' : '';
   const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');' + treeQuery + 'way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + ');way[bridge=yes](' + bbox + ');way[tunnel=yes](' + bbox + ');way[covered=yes](' + bbox + '););out body geom;';
   try {
     let response;
     for (const endpoint of overpassUrls) {
       try {
-        const candidate = await fetch(endpoint + '?data=' + encodeURIComponent(query));
+        const candidate = await Promise.race([fetch(endpoint + '?data=' + encodeURIComponent(query)), new Promise((_, reject) => setTimeout(() => reject(new Error('Overpass timeout')), 12000))]);
         if (candidate.ok) { response = candidate; break; }
       } catch (error) { console.warn('Overpass endpoint unavailable', endpoint); }
     }
     if (!response) throw new Error('Overpass endpoints unavailable');
     const layers = convertOverpass(await response.json());
     Object.entries(layers).forEach(([name, geojson]) => map.getSource('osm-' + name).setData(geojson));
+    try { localStorage.setItem(specialCacheKey, JSON.stringify({ savedAt: Date.now(), includeTrees, layers })); } catch (error) { console.warn('Не удалось сохранить кэш объектов', error); }
     specialDataLoaded = true;
     if (includeTrees) treeDataLoaded = true;
     document.querySelector('.legend-note').textContent = 'Основные слои — OSM. Специальные объекты загружены для текущей области карты через Overpass API.';
