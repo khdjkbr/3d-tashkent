@@ -46,3 +46,7 @@ h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
 .control-panel.is-collapsed .layer-row, .control-panel.is-collapsed .legend-note { display: none; }
 .layer-row span { gap: 7px; }
 @media (max-width: 640px) { .control-panel { width: min(282px, calc(100vw - 30px)); padding: 12px; } .layer-row { min-height: 34px; font-size: 13px; } }
+.time-control { margin: 0 0 10px; padding: 9px 0 11px; border-bottom: 1px solid var(--line); }
+.time-control label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.time-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
+.time-control input { width: 100%; accent-color: var(--accent); cursor: pointer; }
