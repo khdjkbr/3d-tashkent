@@ -35,6 +35,26 @@ function rampFeature(a, b) {
   const py = (dx / length) * halfWidth;
   return { type: 'Feature', properties: { kind: 'underground-ramp', base: 0, height: 0.65 }, geometry: { type: 'Polygon', coordinates: [[[a.lon + px, a.lat + py], [b.lon + px, b.lat + py], [b.lon - px, b.lat - py], [a.lon - px, a.lat - py], [a.lon + px, a.lat + py]]] } };
 }
+function bridgeApproachFeatures(point, toward, element) {
+  const dx = toward.lon - point.lon;
+  const dy = toward.lat - point.lat;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const approachLength = element.tags?.highway === 'footway' ? 0.00016 : 0.0003;
+  const halfWidth = element.tags?.highway === 'footway' ? 0.00002 : 0.000045;
+  const px = -uy * halfWidth;
+  const py = ux * halfWidth;
+  const deckHeight = element.tags?.highway === 'footway' ? 4.5 : 5.5;
+  const levels = [0.2, 0.45, 0.7, 1];
+  let previous = 0;
+  return levels.map((level) => {
+    const from = { lon: point.lon + ux * approachLength * previous, lat: point.lat + uy * approachLength * previous };
+    const to = { lon: point.lon + ux * approachLength * level, lat: point.lat + uy * approachLength * level };
+    previous = level;
+    return { type: 'Feature', properties: { kind: 'bridge-approach', base: 0, height: deckHeight * level }, geometry: { type: 'Polygon', coordinates: [[[from.lon + px, from.lat + py], [to.lon + px, to.lat + py], [to.lon - px, to.lat - py], [from.lon - px, from.lat - py], [from.lon + px, from.lat + py]]] } };
+  });
+}
 function bridgeSlabFeature(a, b, element) {
   const dx = b.lon - a.lon;
   const dy = b.lat - a.lat;
@@ -53,7 +73,7 @@ function bridgeDeckFeature(a, b, element) {
 
 function convertOverpass(data) {
   const seenWays = new Set();
-  const result = { signals: emptyCollection(), crossings: emptyCollection(), trees: emptyCollection(), treeTrunks: emptyCollection(), treeCrowns: emptyCollection(), footways: emptyCollection(), underground: emptyCollection(), undergroundEntrances: emptyCollection(), undergroundPortals: emptyCollection(), undergroundRamps: emptyCollection(), bridgeDecks: emptyCollection(), bridgeSlabs: emptyCollection() };
+  const result = { signals: emptyCollection(), crossings: emptyCollection(), trees: emptyCollection(), treeTrunks: emptyCollection(), treeCrowns: emptyCollection(), footways: emptyCollection(), underground: emptyCollection(), undergroundEntrances: emptyCollection(), undergroundPortals: emptyCollection(), undergroundRamps: emptyCollection(), bridgeDecks: emptyCollection(), bridgeSlabs: emptyCollection(), bridgeApproaches: emptyCollection() };
   data.elements.forEach((element) => {
     const tags = element.tags || {};
     if (element.type === 'node' && tags.highway === 'traffic_signals') result.signals.features.push(pointFeature(element, 'traffic_signals'));
@@ -72,6 +92,8 @@ function convertOverpass(data) {
             result.bridgeDecks.features.push(bridgeDeckFeature(points[index], points[index + 1], element));
             result.bridgeSlabs.features.push(bridgeSlabFeature(points[index], points[index + 1], element));
           }
+          result.bridgeApproaches.features.push(...bridgeApproachFeatures(points[0], points[1], element));
+          result.bridgeApproaches.features.push(...bridgeApproachFeatures(points[points.length - 1], points[points.length - 2], element));
         }
         target.features.push(wayFeature(element, isUnderground ? 'underground' : 'footway'));
         if (isUnderground) {
@@ -193,9 +215,10 @@ map.on('load', () => {
     }, 180);
   } catch (error) { console.warn('Анимация воды временно недоступна', error); }
   applySunTime(Number(document.querySelector('#time-of-day')?.value || 14));
-  const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'treeTrunks', 'treeCrowns'];
+  const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'bridgeApproaches', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
+  map.addLayer({ id: 'osm-bridge-approaches', type: 'fill-extrusion', source: 'osm-bridgeApproaches', paint: { 'fill-extrusion-color': '#84776b', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.74 } });
   map.addLayer({ id: 'osm-bridge-slabs', type: 'fill-extrusion', source: 'osm-bridgeSlabs', paint: { 'fill-extrusion-color': '#75695e', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.68 } });
   map.addLayer({ id: 'osm-bridge-shadow', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#5b321b', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 7, 17, 18], 'line-opacity': 0.35, 'line-blur': 2 } });
   map.addLayer({ id: 'osm-bridge-deck', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#b9783f', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 4, 17, 12], 'line-opacity': 0.95 } });
@@ -209,7 +232,7 @@ map.on('load', () => {
   map.addLayer({ id: 'osm-signals', type: 'circle', source: 'osm-signals', paint: { 'circle-color': '#f07062', 'circle-radius': 5, 'circle-stroke-color': '#fff3e4', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'osm-tree-trunks', type: 'fill-extrusion', source: 'osm-treeTrunks', paint: { 'fill-extrusion-color': '#765034', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.95 } });
   map.addLayer({ id: 'osm-tree-crowns', type: 'fill-extrusion', source: 'osm-treeCrowns', paint: { 'fill-extrusion-color': '#398a58', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.84 } });
-  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-portals', 'osm-underground-ramps', 'osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-slabs', 'osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], terrain: ['terrain-hillshade'], footways: ['osm-footways'], signals: ['osm-signals'] };
+  map.__layerGroups = { buildings: buildingLayers, roads: roadLayers, water: waterLayers, greenery: greeneryLayers, crossings: ['osm-crossings'], underground: ['osm-underground-portals', 'osm-underground-ramps', 'osm-underground-shadow', 'osm-underground', 'osm-underground-entrances'], trees: ['osm-tree-trunks', 'osm-tree-crowns'], bridges: ['osm-bridge-approaches', 'osm-bridge-slabs', 'osm-bridge-shadow', 'osm-bridge-deck', 'osm-bridge-rails'], terrain: ['terrain-hillshade'], footways: ['osm-footways'], signals: ['osm-signals'] };
   map.on('click', buildingLayers, (event) => {
     const feature = event.features?.[0];
     if (!feature) return;
