@@ -75,6 +75,13 @@ map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bott
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
 map.on('load', () => {
+  map.once('idle', () => {
+    if (!map.getSource('tashkent-terrain')) {
+      map.addSource('tashkent-terrain', { type: 'raster-dem', url: 'https://terrain.reearth.land/mapterhorn-egm08/terrarium/elevation/tilejson.json', tileSize: 256 });
+      map.setTerrain({ source: 'tashkent-terrain', exaggeration: 1.25 });
+      map.addLayer({ id: 'tashkent-hillshade', type: 'hillshade', source: 'tashkent-terrain', paint: { 'hillshade-exaggeration': 0.22, 'hillshade-shadow-color': '#6f655b', 'hillshade-highlight-color': '#fff4d6' } });
+    }
+  });
   const buildingLayers = map.getStyle().layers.filter((layer) => layer['source-layer'] === 'building').map((layer) => layer.id);
   const roadLayers = map.getStyle().layers.filter((layer) => ['transportation', 'transportation_name'].includes(layer['source-layer'])).map((layer) => layer.id);
   const waterLayers = map.getStyle().layers.filter((layer) => ['water', 'waterway'].includes(layer['source-layer'])).map((layer) => layer.id);
