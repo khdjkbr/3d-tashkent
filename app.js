@@ -101,3 +101,12 @@ document.querySelectorAll('[data-layer]').forEach((input) => {
 document.querySelector('#reset-view').addEventListener('click', () => {
   map.flyTo({ center: tashkent, zoom: 14.2, pitch: 58, bearing: -18, essential: true });
 });
+
+
+// Подключаем бесплатную модель рельефа для ощущения перепадов высот.
+map.on('load', () => {
+  if (!map.getSource('terrain')) {
+    map.addSource('terrain', { type: 'raster-dem', tiles: ['https://demotiles.maplibre.org/terrain-tiles/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 12 });
+    map.setTerrain({ source: 'terrain', exaggeration: 1.5 });
+  }
+});
