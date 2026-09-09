@@ -66,7 +66,10 @@ function convertOverpass(data) {
       const target = isUnderground ? result.underground : result.footways;
       if (points.length > 1) {
         if (isBridge) {
-          for (let index = 0; index < points.length - 1; index += 1) result.bridgeDecks.features.push(bridgeDeckFeature(points[index], points[index + 1], element)); result.bridgeSlabs.features.push(bridgeSlabFeature(points[index], points[index + 1], element));
+          for (let index = 0; index < points.length - 1; index += 1) {
+            result.bridgeDecks.features.push(bridgeDeckFeature(points[index], points[index + 1], element));
+            result.bridgeSlabs.features.push(bridgeSlabFeature(points[index], points[index + 1], element));
+          }
         }
         target.features.push(wayFeature(element, isUnderground ? 'underground' : 'footway'));
         if (isUnderground) {
