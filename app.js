@@ -37,11 +37,11 @@ function bridgeSlabFeature(a, b, element) {
   const dx = b.lon - a.lon;
   const dy = b.lat - a.lat;
   const length = Math.hypot(dx, dy) || 1;
-  const halfWidth = element.tags?.highway === 'footway' ? 0.000035 : 0.00009;
+  const halfWidth = element.tags?.highway === 'footway' ? 0.00002 : 0.000045;
   const px = (-dy / length) * halfWidth;
   const py = (dx / length) * halfWidth;
-  const base = element.tags?.highway === 'footway' ? 4.5 : 6;
-  return { type: 'Feature', properties: { kind: 'bridge-slab', base, height: base + 0.45 }, geometry: { type: 'Polygon', coordinates: [[[a.lon + px, a.lat + py], [b.lon + px, b.lat + py], [b.lon - px, b.lat - py], [a.lon - px, a.lat - py], [a.lon + px, a.lat + py]]] } };
+  const base = element.tags?.highway === 'footway' ? 4.5 : 5.5;
+  return { type: 'Feature', properties: { kind: 'bridge-slab', base, height: base + 0.22 }, geometry: { type: 'Polygon', coordinates: [[[a.lon + px, a.lat + py], [b.lon + px, b.lat + py], [b.lon - px, b.lat - py], [a.lon - px, a.lat - py], [a.lon + px, a.lat + py]]] } };
 }
 function wayFeature(element, kind) { return { type: 'Feature', properties: { kind, ...element.tags }, geometry: { type: 'LineString', coordinates: (element.geometry || []).map((point) => [point.lon, point.lat]) } }; }
 function bridgeDeckFeature(a, b, element) {
@@ -89,11 +89,11 @@ function convertOverpass(data) {
 }
 
 async function loadSpecialLayers() {
-  if (specialRequestInFlight || map.getZoom() < 13 || (specialDataLoaded && (treeDataLoaded || map.getZoom() < 15.5))) return;
+  if (specialRequestInFlight || map.getZoom() < 13 || (specialDataLoaded && (treeDataLoaded || map.getZoom() < 14.0))) return;
   specialRequestInFlight = true;
   const bounds = map.getBounds();
   const bbox = bounds.getSouth() + ',' + bounds.getWest() + ',' + bounds.getNorth() + ',' + bounds.getEast();
-  const includeTrees = map.getZoom() >= 15.5;
+  const includeTrees = map.getZoom() >= 14.0;
   const treeQuery = includeTrees ? 'node[natural=tree](' + bbox + ');' : '';
   const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');' + treeQuery + 'way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + ');way[bridge=yes](' + bbox + ');way[tunnel=yes](' + bbox + ');way[covered=yes](' + bbox + '););out body geom;';
   try {
@@ -133,7 +133,7 @@ map.on('load', () => {
   const sourceNames = ['signals', 'crossings', 'trees', 'footways', 'underground', 'undergroundEntrances', 'undergroundPortals', 'undergroundRamps', 'bridgeDecks', 'bridgeSlabs', 'treeTrunks', 'treeCrowns'];
   sourceNames.forEach((name) => map.addSource('osm-' + name, { type: 'geojson', data: emptyCollection() }));
   map.addLayer({ id: 'osm-footways', type: 'line', source: 'osm-footways', paint: { 'line-color': '#f4f0d8', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 3], 'line-opacity': 0.75 } });
-  map.addLayer({ id: 'osm-bridge-slabs', type: 'fill-extrusion', source: 'osm-bridgeSlabs', paint: { 'fill-extrusion-color': '#9d6334', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.96 } });
+  map.addLayer({ id: 'osm-bridge-slabs', type: 'fill-extrusion', source: 'osm-bridgeSlabs', paint: { 'fill-extrusion-color': '#75695e', 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.68 } });
   map.addLayer({ id: 'osm-bridge-shadow', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#5b321b', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 7, 17, 18], 'line-opacity': 0.35, 'line-blur': 2 } });
   map.addLayer({ id: 'osm-bridge-deck', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#b9783f', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 4, 17, 12], 'line-opacity': 0.95 } });
   map.addLayer({ id: 'osm-bridge-rails', type: 'line', source: 'osm-bridgeDecks', paint: { 'line-color': '#ead0a0', 'line-width': 1.5, 'line-offset': 5, 'line-opacity': 0.9 } });
