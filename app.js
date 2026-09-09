@@ -49,6 +49,7 @@ function bridgeDeckFeature(a, b, element) {
 }
 
 function convertOverpass(data) {
+  const seenWays = new Set();
   const result = { signals: emptyCollection(), crossings: emptyCollection(), trees: emptyCollection(), treeTrunks: emptyCollection(), treeCrowns: emptyCollection(), footways: emptyCollection(), underground: emptyCollection(), undergroundEntrances: emptyCollection(), undergroundPortals: emptyCollection(), undergroundRamps: emptyCollection(), bridgeDecks: emptyCollection(), bridgeSlabs: emptyCollection() };
   data.elements.forEach((element) => {
     const tags = element.tags || {};
@@ -56,6 +57,8 @@ function convertOverpass(data) {
     if (element.type === 'node' && tags.highway === 'crossing') result.crossings.features.push(pointFeature(element, 'crossing'));
     if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); result.treeCrowns.features.push(treePartFeature(element, 'crown-upper')); }
     if (element.type === 'way' && (['footway', 'path', 'pedestrian', 'cycleway'].includes(tags.highway) || tags.bridge === 'yes' || tags.tunnel === 'yes' || tags.covered === 'yes')) {
+      if (seenWays.has(element.id)) return;
+      seenWays.add(element.id);
       const points = element.geometry || [];
       const isUnderground = tags.tunnel === 'yes' || tags.covered === 'yes' || tags.layer === '-1';
       const isBridge = !isUnderground && tags.bridge === 'yes';
@@ -144,7 +147,7 @@ map.on('load', () => {
   });
   map.on('click', 'osm-bridge-deck', (event) => {
     const feature = event.features?.[0];
-    const name = feature?.properties?.name || 'Мост или надземный переход';
+    const name = feature?.properties?.name || (feature?.properties?.highway === 'footway' ? 'Надземный пешеходный переход' : 'Мост');
     new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>' + name + '</strong><br>Объёмная плита и перила построены по данным OpenStreetMap.<br><small>Тип: ' + (feature?.properties?.highway || 'мост') + '</small>').addTo(map);
   });
   map.on('click', 'osm-tree-crowns', (event) => {
