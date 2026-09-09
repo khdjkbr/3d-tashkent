@@ -55,7 +55,7 @@ function convertOverpass(data) {
     if (element.type === 'node' && tags.highway === 'traffic_signals') result.signals.features.push(pointFeature(element, 'traffic_signals'));
     if (element.type === 'node' && tags.highway === 'crossing') result.crossings.features.push(pointFeature(element, 'crossing'));
     if (element.type === 'node' && tags.natural === 'tree') { result.trees.features.push(pointFeature(element, 'tree')); result.treeTrunks.features.push(treePartFeature(element, 'trunk')); result.treeCrowns.features.push(treePartFeature(element, 'crown')); result.treeCrowns.features.push(treePartFeature(element, 'crown-upper')); }
-    if (element.type === 'way' && (['footway', 'path', 'pedestrian', 'cycleway'].includes(tags.highway) || tags.bridge === 'yes')) {
+    if (element.type === 'way' && (['footway', 'path', 'pedestrian', 'cycleway'].includes(tags.highway) || tags.bridge === 'yes' || tags.tunnel === 'yes' || tags.covered === 'yes')) {
       const points = element.geometry || [];
       const isUnderground = tags.tunnel === 'yes' || tags.covered === 'yes' || tags.layer === '-1';
       const isBridge = !isUnderground && tags.bridge === 'yes';
@@ -86,7 +86,7 @@ async function loadSpecialLayers() {
   specialRequestInFlight = true;
   const bounds = map.getBounds();
   const bbox = bounds.getSouth() + ',' + bounds.getWest() + ',' + bounds.getNorth() + ',' + bounds.getEast();
-  const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');node[natural=tree](' + bbox + ');way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + '););out body geom;';
+  const query = '[out:json][timeout:25];(node[highway=traffic_signals](' + bbox + ');node[highway=crossing](' + bbox + ');node[natural=tree](' + bbox + ');way[highway~"^(footway|path|pedestrian|cycleway|primary|secondary|tertiary|trunk|motorway)$"](' + bbox + ');way[bridge=yes](' + bbox + ');way[tunnel=yes](' + bbox + ');way[covered=yes](' + bbox + '););out body geom;';
   try {
     let response;
     for (const endpoint of overpassUrls) {
@@ -141,6 +141,18 @@ map.on('load', () => {
     const feature = event.features?.[0];
     if (!feature) return;
     new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>' + (feature.properties.name || 'Здание') + '</strong><br>Оценочная высота: ' + (feature.properties.render_height || 'нет данных') + ' м<br><small>OpenStreetMap / OpenMapTiles</small>').addTo(map);
+  });
+  map.on('click', 'osm-bridge-deck', (event) => {
+    const feature = event.features?.[0];
+    const name = feature?.properties?.name || 'Мост или надземный переход';
+    new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>' + name + '</strong><br>Объёмная плита и перила построены по данным OpenStreetMap.<br><small>Тип: ' + (feature?.properties?.highway || 'мост') + '</small>').addTo(map);
+  });
+  map.on('click', 'osm-tree-crowns', (event) => {
+    new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>Дерево</strong><br>Объёмная крона и ствол. Координата взята из OpenStreetMap.').addTo(map);
+  });
+  map.on('click', 'osm-underground-portals', (event) => {
+    const feature = event.features?.[0];
+    new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>' + (feature?.properties?.role || 'Подземный переход') + '</strong><br>Объёмный вход с наклонным спуском. Глубина не моделируется по данным OSM.').addTo(map);
   });
   map.on('click', 'osm-underground-entrances', (event) => {
     new maplibregl.Popup({ closeButton: true, offset: 12 }).setLngLat(event.lngLat).setHTML('<strong>Подземный переход</strong><br>Фиолетовая линия показывает путь под землёй, светлая точка — вход или выход.').addTo(map);
